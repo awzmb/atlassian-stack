@@ -1,0 +1,4 @@
+# exclude all data files
+*.retry
+*.swp
+atlassian-proxy/acme/acme.json
