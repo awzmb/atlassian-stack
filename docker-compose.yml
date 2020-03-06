@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.6'
 
 networks:
   traefik:
@@ -7,7 +7,7 @@ networks:
 
 services:
   traefik:
-    image: traefik:latest
+    image: traefik:1.7
     container_name: atlassian-proxy
     restart: always
     ports:
@@ -27,7 +27,6 @@ services:
       - traefik
 
   database:
-    build: ./atlassian-postgres
     image: atlassian-postgres
     container_name: database
     restart: always
@@ -41,7 +40,6 @@ services:
       - traefik
 
   jira:
-    build: ./atlassian-jira
     image: atlassian-jira
     container_name: jira
     restart: always
@@ -67,90 +65,6 @@ services:
         - jira:/opt/atlassian/jira-data
     networks:
       - traefik
-
-  confluence:
-    build: ./atlassian-confluence
-    image: atlassian-confluence
-    container_name: confluence
-    restart: always
-    depends_on:
-      - database
-    expose:
-      - "8090"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.backend=confluence"
-      - "traefik.frontend.rule=PathPrefix: /confluence"
-      - "traefik.port=8090"
-      - "traefik.docker.network=traefik"
-    environment:
-      - JVM_MINIMUM_MEMORY=512m
-      - JVM_MAXIMUM_MEMORY=2048m
-      - CATALINA_CONNECTOR_SCHEME=https
-      - CATALINA_CONNECTOR_SECURE=true
-      - CATALINA_CONNECTOR_PROXYNAME=${DOMAIN_NAME}
-      - CATALINA_CONNECTOR_PROXYPORT=443
-      - CATALINA_CONTEXT_PATH=/confluence
-    volumes:
-      - confluence:/opt/atlassian/confluence-data
-    networks:
-      - traefik
-
-  bitbucket:
-    build: ./atlassian-bitbucket
-    image: atlassian-bitbucket
-    container_name: bitbucket
-    restart: always
-    depends_on:
-      - database
-    expose:
-      - "7990"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.backend=bitbucket"
-      - "traefik.frontend.rule=PathPrefix: /bitbucket"
-      - "traefik.port=7990"
-      - "traefik.docker.network=traefik"
-    environment:
-      - JVM_MINIMUM_MEMORY=512m
-      - JVM_MAXIMUM_MEMORY=2048m
-      - CATALINA_CONNECTOR_SCHEME=https
-      - CATALINA_CONNECTOR_SECURE=true
-      - CATALINA_CONNECTOR_PROXYNAME=${DOMAIN_NAME}
-      - CATALINA_CONNECTOR_PROXYPORT=443
-      - CATALINA_CONTEXT_PATH=/bitbucket
-    volumes:
-      - bitbucket:/opt/atlassian/bitbucket-data
-    networks:
-      - traefik
-  
-  bamboo:
-    build: ./atlassian-bamboo
-    image: atlassian-bamboo
-    container_name: bamboo
-    restart: always
-    depends_on:
-      - database
-    expose:
-      - "8085"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.backend=bamboo"
-      - "traefik.frontend.rule=PathPrefix: /bamboo"
-      - "traefik.port=8085"
-      - "traefik.docker.network=traefik"
-    environment:
-      - JVM_MINIMUM_MEMORY=512m
-      - JVM_MAXIMUM_MEMORY=2048m
-      - CATALINA_CONNECTOR_SCHEME=https
-      - CATALINA_CONNECTOR_SECURE=true
-      - CATALINA_CONNECTOR_PROXYNAME=${DOMAIN_NAME}
-      - CATALINA_CONNECTOR_PROXYPORT=443
-      - CATALINA_CONTEXT_PATH=/bamboo
-    volumes:
-      - bamboo:/opt/atlassian/bamboo-data
-    networks:
-      - traefik
   
 volumes:
     database:
@@ -159,13 +73,3 @@ volumes:
     jira:
         name: jira
         driver: local
-    confluence:
-        name: confluence
-        driver: local
-    bitbucket:
-        name: bitbucket
-        driver: local
-    bamboo:
-        name: bamboo
-        driver: local
-

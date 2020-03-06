@@ -1,6 +1,6 @@
 FROM openjdk:8-jdk-alpine
 
-ARG JIRA_VERSION=8.0.2
+ARG JIRA_VERSION=8.5.3
 ARG DOWNLOAD_URL=http://www.atlassian.com/software/jira/downloads/binary/atlassian-jira-software-${JIRA_VERSION}.tar.gz
 
 ENV RUN_USER            daemon

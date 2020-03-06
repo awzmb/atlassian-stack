@@ -16,7 +16,7 @@ defaultEntryPoints = ["http", "https"]
     [entryPoints.https.tls]
 
 [acme]
-  email = "dennis.bundschuh@ancud.de"
+  email = "dennis@butt3rweck.com"
   storage = "/etc/traefik/acme/acme.json"
   onDemand = true
   caServer = "https://acme-v02.api.letsencrypt.org/directory"
