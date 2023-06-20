@@ -1,0 +1,154 @@
+version: '3.6'
+
+networks:
+  traefik:
+    name: traefik
+    driver: bridge
+
+services:
+  traefik:
+    image: docker.io/traefik:3.0
+    container_name: atlassian-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      - "traefik.enable=false"
+      - "traefik.backend=traefik"
+      - "traefik.docker.network=traefik"
+      - "traefik.frontend.redirect.entryPoint=https"
+    volumes:
+      - /run/podman/podman.sock:/var/run/docker.sock:ro
+      - ./atlassian-proxy/traefik.yml:/traefik.yml:ro
+      - ./atlassian-proxy/acme:/etc/traefik/acme
+    networks:
+      - traefik
+
+  database:
+    image: docker.io/postgres:9.5-alpine
+    networks:
+      - traefik
+    volumes:
+      - ./atlassian-postgres:/docker-entrypoint-initdb.d
+      - database:/var/lib/postgresql/data
+    labels:
+      - "traefik.enable=false"
+    expose:
+      - "5432"
+    environment:
+      - 'POSTGRES_USER=atlassian'
+      - 'POSTGRES_PASSWORD=jellyfish'
+      - 'POSTGRES_MULTIPLE_DATABASES="jiradb;confluencedb"'
+      #- 'POSTGRES_DB=jiradb'
+      - 'POSTGRES_ENCODING=UNICODE'
+      - 'POSTGRES_COLLATE=C'
+      - 'POSTGRES_COLLATE_TYPE=C'
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  jira:
+    depends_on:
+      - database
+    image: docker.io/atlassian/jira-software:9.4.7
+    networks:
+      - traefik
+    volumes:
+      - jira-data-var:/var/atlassian/jira
+      - jira-data-opt:/opt/atlassian/jira
+    ports:
+      - '8080:8080'
+    expose:
+      - "8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=jira"
+      #- "traefik.frontend.rule=PathPrefix:/jira"
+      - "traefik.port=8080"
+      #- "traefik.docker.network=traefik"
+      - "traefik.http.routers.jira.rule=Host(`jira.awzm.org`)"
+      - "traefik.http.routers.jira.tls=true"
+      - "traefik.http.routers.jira.tls.certresolver=resolver"
+    environment:
+      - 'ATL_JDBC_URL=postgresql://atlassian@database:5423/jiradb'
+      - 'ATL_JDBC_PASSWORD=jellyfish'
+      - 'ATL_DB_DRIVER=org.postgresql.Driver'
+      - 'ATL_DB_TYPE=postgres72'
+      - 'ATL_PROXY_NAME=jira.awzm.org'
+      - 'ATL_PROXY_PORT=443'
+      - 'ATL_TOMCAT_CONTEXTPATH=/'
+      - 'ATL_TOMCAT_SECURE=true'
+      - 'ATL_TOMCAT_SCHEME=https'
+      - 'JVM_MINIMUM_MEMORY=2048m'
+      - 'JVM_MAXIMUM_MEMORY=4096m'
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  confluence:
+    depends_on:
+      - postgresql
+    image: docker.io/atlassian/confluence-server:latest
+    networks:
+      - traefik
+    volumes:
+      - confluence-data-var:/var/atlassian/application-data/confluence
+    ports:
+      - '8090:8090'
+    expose:
+      - "8090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=confluence"
+      - "traefik.port=8090"
+      - "traefik.http.routers.confluence.rule=Host(`confluence.awzm.org`)"
+      - "traefik.http.routers.confluence.tls=true"
+      - "traefik.http.routers.confluence.tls.certresolver=resolver"
+    environment:
+      - 'ATL_JDBC_URL=postgresql://atlassian@postgresql:5432/confluencedb'
+      - 'ATL_JDBC_PASSWORD=jellyfish'
+      - 'ATL_DB_DRIVER=org.postgresql.Driver'
+      - 'ATL_DB_TYPE=postgresql'
+      - 'ATL_PROXY_NAME=confluence.awzm.org'
+      - 'ATL_PROXY_PORT=443'
+      - 'ATL_TOMCAT_CONTEXTPATH=/'
+      - 'ATL_TOMCAT_SECURE=true'
+      - 'ATL_TOMCAT_SCHEME=https'
+      - 'JVM_MINIMUM_MEMORY=2048m'
+      - 'JVM_MAXIMUM_MEMORY=4096m'
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+whoami:
+    image: "traefik/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.awzm.org`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=resolver"
+
+volumes:
+    database:
+        name: database
+        driver: local
+    confluence-data-var:
+        name: confluence-data-var
+        driver: local
+    jira-data-var:
+        name: jira-data-var
+        driver: local
+    jira-data-opt:
+        name: jira-data-opt
+        driver: local

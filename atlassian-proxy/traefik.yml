@@ -1,0 +1,53 @@
+################################################################
+# Traefik configuration
+################################################################
+
+certificatesResolvers:
+  resolver:
+    acme:
+      email: dennis.bundschuh@metamorphant.de
+      storage: /etc/traefik/acme/acme.json
+      httpChallenge:
+        # used during the challenge
+        entryPoint: web
+
+entryPoints:
+  web:
+    address: :80
+    forwardedHeaders:
+      insecure: true
+    #http:
+      #tls:
+        ## Generate a wildcard domain certificate
+        #certResolver: resolver
+        #domains:
+          #- main: awzm.org
+            #sans:
+              #- '*.awzm.org'
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: :443
+    forwardedHeaders:
+      insecure: true
+
+log:
+  level: INFO
+
+api:
+  insecure: true
+  dashboard: true
+
+providers:
+  docker:
+    #defaultRule: Host(ˋ{{ normalize .Name }}.awzm.orgˋ)
+    endpoint: "unix:///var/run/docker.sock"
+    network: traefik
+    exposedByDefault: false
+    #tls:
+      #insecureSkipVerify: true
+
+global:
+  sendAnonymousUsage: true
