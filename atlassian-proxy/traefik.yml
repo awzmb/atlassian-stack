@@ -16,7 +16,7 @@ entryPoints:
     address: :80
     forwardedHeaders:
       insecure: true
-    #http:
+    http:
       #tls:
         ## Generate a wildcard domain certificate
         #certResolver: resolver
