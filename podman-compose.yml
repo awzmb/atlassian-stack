@@ -189,10 +189,12 @@ services:
     environment:
       # create argon2 hashed password on cli with
       # echo -n "YourPassword" | argon2 wst5qhbgk2lu1ih4dmuxvg$ls1alrvdiwtvzhwnzcm1dugg+5dto3dt1d5v9xtlws4 -i -t 3 -p 1
-      - PASSWORD=PASSWORD
-      - HASHED_PASSWORD=$argon2i$v=19$m=4096,t=3,p=1$d3N0NXFoYmdrMmx1MWloNGRtdXh2Zys1ZHRvM2R0MWQ1djl4dGx3czQ$ruy6WpEX4Qcn9pWl0AUQkKq1YF9hMnTRXyQWZYNAX4M
+      #- HASHED_PASSWORD='$argon2i$v=19$m=4096,t=3,p=1$d3N0NXFoYmdrMmx1MWloNGRtdXh2Zys1ZHRvM2R0MWQ1djl4dGx3czQ$ybCsv3scF48oPW9YKEgT1zyd0o5M0YghQrkZF+HsEBI'
+      - FILE__PASSWORD=/run/secrets/codeserverpassword
       - PROXY_DOMAIN_ARG=devbox.awzm.org
       - DEFAULT_WORKSPACE=/config/workspace
+    secrets:
+      - codeserverpassword
     logging:
       # limit logs retained on host to 25MB
       driver: "json-file"
@@ -200,32 +202,9 @@ services:
         max-size: "500k"
         max-file: "50"
 
-  #registry:
-    #image: docker.io/registry:2
-    #container_name: registry
-    ##networks:
-    ##- traefik
-    #volumes:
-      #- registry:/data
-    #ports:
-      #- '5000:5000'
-    #expose:
-      #- "5000"
-    #labels:
-      #- "traefik.enable=true"
-      #- "traefik.backend=registry"
-      #- "traefik.port=5000"
-      #- "traefik.http.routers.registry.rule=Host(`registry.awzm.org`)"
-      #- "traefik.http.routers.registry.tls=true"
-      #- "traefik.http.routers.registry.tls.certresolver=resolver"
-    #environment:
-      #- REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data
-    #logging:
-      ## limit logs retained on host to 25MB
-      #driver: "json-file"
-      #options:
-        #max-size: "500k"
-        #max-file: "50"
+secrets:
+  codeserverpassword:
+    file: ~/.secrets/codeserverpassword
 
 volumes:
     database-jira:

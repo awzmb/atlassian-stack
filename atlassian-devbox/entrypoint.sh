@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -n "${PASSWORD}" ] || [ -n "${HASHED_PASSWORD}" ]; then
+if [ -n "${PASSWORD}" ] || [ -n "${HASHED_PASSWORD}" ] || [ -n "${FILE__PASSWORD}" ]; then
     AUTH="password"
 else
     AUTH="none"
@@ -11,6 +11,11 @@ if [ -z ${PROXY_DOMAIN+x} ]; then
     PROXY_DOMAIN_ARG=""
 else
     PROXY_DOMAIN_ARG="--proxy-domain=${PROXY_DOMAIN}"
+fi
+
+if [ -n "${FILE__PASSWORD}" ]; then
+  sed -i -e "s/password:.*/password: $(cat ${FILE__PASSWORD})/g" ~/.config/code-server/config.yaml
+  echo "using password from ${FILE__PASSWORD}"
 fi
 
 exec \
