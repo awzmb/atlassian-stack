@@ -168,7 +168,7 @@ services:
         max-file: "50"
 
   devbox:
-    image: lscr.io/linuxserver/code-server:latest
+    image: devbox:latest
     container_name: devbox
     networks:
       - traefik
@@ -200,14 +200,32 @@ services:
         max-size: "500k"
         max-file: "50"
 
-whoami:
-    image: "traefik/whoami"
-    container_name: whoami
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.awzm.org`)"
-      - "traefik.http.routers.devbox.tls=true"
-      - "traefik.http.routers.whoami.tls.certresolver=resolver"
+  #registry:
+    #image: docker.io/registry:2
+    #container_name: registry
+    ##networks:
+    ##- traefik
+    #volumes:
+      #- registry:/data
+    #ports:
+      #- '5000:5000'
+    #expose:
+      #- "5000"
+    #labels:
+      #- "traefik.enable=true"
+      #- "traefik.backend=registry"
+      #- "traefik.port=5000"
+      #- "traefik.http.routers.registry.rule=Host(`registry.awzm.org`)"
+      #- "traefik.http.routers.registry.tls=true"
+      #- "traefik.http.routers.registry.tls.certresolver=resolver"
+    #environment:
+      #- REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data
+    #logging:
+      ## limit logs retained on host to 25MB
+      #driver: "json-file"
+      #options:
+        #max-size: "500k"
+        #max-file: "50"
 
 volumes:
     database-jira:
@@ -230,4 +248,7 @@ volumes:
         driver: local
     devbox-home:
         name: devbox-home
+        driver: local
+    registry:
+        name: registry
         driver: local

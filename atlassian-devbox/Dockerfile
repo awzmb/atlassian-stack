@@ -1,40 +1,66 @@
-FROM docker.io/fedora:latest
+FROM docker.io/alpine:edge
 
 ARG CODE_RELEASE=4.14.0
 
-# update packages
-RUN dnf -y update
+# update list and packages
+RUN apk update && apk upgrade
 
-# enable rpmfusion repositories
-RUN rpm -Uvh http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-RUN rpm -Uvh http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+# core functionality
+RUN apk add \
+  util-linux pciutils usbutils coreutils binutils findutils grep iproute2 git
 
-RUN dnf -y install \
-  zsh vim neovim vifm util-linux-user calc \
-  unrar exa bat jq jd tree ack git fd-find fzf sqlite \
-  libgpiod-utils python3-libgpiod netcat
+# basic packages
+RUN apk add \
+  vim zsh bash neovim tmux pass \
+  openssl curl bat w3m exa zip \
+  ctags zsh-vcs python3 ack p7zip \
+  coreutils tree ranger nodejs \
+  npm yarn curl wget fd fzf openssh \
+  nodejs grep tar openssl \
+  ca-certificates ncurses ruby \
+  gcompat libuser bash bash-doc \
+  bash-completion
 
-# openvpn connections via nmcli
-RUN dnf -y install \
-  NetworkManager-openvpn
+# devops tools
+RUN apk add \
+  terraform ansible aws-cli py3-pip
 
-# python environment
-RUN dnf -y install \
-  pipenv \
-  python3-autopep8 \
-  python3-pandas \
-  python3-pip \
-  yamllint
+# go development
+RUN apk add go
 
-# java dev environment
-RUN dnf -y install \
-  java-11-openjdk \
+# java development
+RUN apk add \
+  openjdk11 \
   maven
 
-# code-server
-RUN dnf -y install \
-  libatomic \
-  nano
+# building and c
+RUN apk add \
+  build-base gcc abuild binutils binutils-doc gcc-doc
+
+# python packages
+RUN pip install \
+  markdown \
+  html2text \
+  requests \
+  beautifulsoup4 \
+  pyyaml \
+  pyxdg \
+  pytz \
+  python-dateutil \
+  urwid
+
+# terraform-docs
+RUN curl -sSLo ./terraform-docs.tar.gz https://terraform-docs.io/dl/v0.16.0/terraform-docs-v0.16.0-$(uname)-amd64.tar.gz && \
+  tar -xzf terraform-docs.tar.gz && \
+  rm terraform-docs.tar.gz && \
+  chmod +x terraform-docs && \
+  mv terraform-docs /usr/local/bin/terraform-docs
+
+# infracost
+RUN curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh
+
+# download kubectl binary
+RUN wget "https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubectl" -O "/usr/local/bin/kubectl"
 
 RUN echo "**** install code-server ****" && \
   if [ -z ${CODE_RELEASE+x} ]; then \
@@ -48,13 +74,6 @@ RUN echo "**** install code-server ****" && \
   tar xf /tmp/code-server.tar.gz -C \
     /app/code-server --strip-components=1
 
-# terminal tools and software
-RUN dnf -y install \
-  w3m \
-  w3m-img \
-  python3-neovim \
-  calcurse
-
 # install vim-plug plugin manager
 # for vim and neovim
 RUN curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
@@ -62,28 +81,16 @@ RUN curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
 RUN sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
 
-# aws tools
-RUN dnf -y install \
-  aws-tools \
-  awscli
-
-# openvpn
-RUN dnf -y install \
-  openvpn
-
 # helm kubernetes package manager
 RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && \
   sh get_helm.sh && \
   rm get_helm.sh
 
-# vim dependencies
-RUN dnf -y install \
-  yarnpkg
-
-# cleanup
-RUN dnf clean all
+# get custom shell setup from github
+RUN git clone https://github.com/awzmb/wmconfig $HOME/.cfg
+RUN $HOME/.cfg/install || :
 
 # copy over files from linuxserver/code-server
-ADD ./entrypoint.sh /entrypoint.sh
+ADD ./entrypoint.sh /app/entrypoint.sh
 
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT [ "bash", "/app/entrypoint.sh" ]

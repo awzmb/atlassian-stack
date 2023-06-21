@@ -46,6 +46,7 @@ providers:
     endpoint: "unix:///var/run/docker.sock"
     network: traefik
     exposedByDefault: false
+    watch: true
     #tls:
       #insecureSkipVerify: true
 
