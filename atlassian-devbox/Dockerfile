@@ -24,6 +24,8 @@ RUN apk add \
 # devops tools
 RUN apk add \
   terraform ansible aws-cli py3-pip
+RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing \
+  terragrunt
 
 # go development
 RUN apk add go
