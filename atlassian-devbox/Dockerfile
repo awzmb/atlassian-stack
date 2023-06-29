@@ -35,7 +35,8 @@ RUN apk add openvpn
 
 # java development
 RUN apk add \
-  openjdk11 \
+  openjdk17-jdk \
+  openjdk11-jdk \
   maven
 
 # building and c
@@ -105,6 +106,9 @@ RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master
 # get custom shell setup from github
 RUN git clone https://github.com/awzmb/wmconfig $HOME/.cfg
 RUN $HOME/.cfg/install || :
+
+# set default shell to zsh
+RUN chsh =s /bin/zsh
 
 # copy over files from linuxserver/code-server
 ADD ./entrypoint.sh /app/entrypoint.sh
