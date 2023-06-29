@@ -149,7 +149,7 @@ services:
       - ATL_JDBC_PASSWORD=jellyfish
       - ATL_DB_SCHEMA_NAME=public
       - ATL_DB_DRIVER=org.postgresql.Driver
-      - ATL_DB_TYPE=postgres72
+      - ATL_DB_TYPE=postgresql
       - ATL_DB_POOLMAXSIZE=40
       - ATL_DB_POOLMINSIZE=40
       - ATL_DB_MAXIDLE=40
