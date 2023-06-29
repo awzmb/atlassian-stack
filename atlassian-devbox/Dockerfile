@@ -19,7 +19,7 @@ RUN apk add \
   nodejs grep tar openssl \
   ca-certificates ncurses ruby \
   gcompat libuser bash bash-doc \
-  bash-completion
+  bash-completion shadow
 
 # devops tools
 RUN apk add \
@@ -29,6 +29,9 @@ RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing \
 
 # go development
 RUN apk add go
+
+# openvpn
+RUN apk add openvpn
 
 # java development
 RUN apk add \
@@ -82,6 +85,17 @@ RUN curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
     https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 RUN sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+
+# install atlassian sdk and set ATLAS_HOME accordingly
+RUN curl -o /tmp/atlassian-plugin-sdk.tar.gz -L "https://marketplace.atlassian.com/download/plugins/atlassian-plugin-sdk-tgz" && \
+  mkdir -p /app/atlassian-sdk && \
+  tar xf /tmp/atlassian-plugin-sdk.tar.gz -C \
+    /app/atlassian-sdk --strip-components=1
+RUN echo "export ATLAS_HOME=/app/atlassian-sdk" > /etc/profile.d/30atlassian-sdk.sh
+
+# maven settings.xml for atlassian development
+RUN mkdir -p ${HOME}/.m2
+ADD ./maven-settings.xml ${HOME}/.m2/settings.xml
 
 # helm kubernetes package manager
 RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && \

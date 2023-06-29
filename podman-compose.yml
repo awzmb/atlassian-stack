@@ -170,6 +170,11 @@ services:
   devbox:
     image: devbox:latest
     container_name: devbox
+    # allow openvpn connections from container
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
     networks:
       - traefik
     volumes:
