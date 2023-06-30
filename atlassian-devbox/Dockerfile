@@ -37,6 +37,7 @@ RUN apk add openvpn
 RUN apk add \
   openjdk17-jdk \
   openjdk11-jdk \
+  openjdk8 \
   maven
 
 # building and c
@@ -93,7 +94,7 @@ RUN curl -o /tmp/atlassian-plugin-sdk.tar.gz -L "https://marketplace.atlassian.c
   mkdir -p /app/atlassian-sdk && \
   tar xf /tmp/atlassian-plugin-sdk.tar.gz -C \
     /app/atlassian-sdk --strip-components=1
-RUN echo "export ATLAS_HOME=/app/atlassian-sdk" > /etc/profile.d/30atlassian-sdk.sh
+RUN echo "export ATLAS_HOME=/app/atlassian-sdk" > /etc/profile.d/atlassian-sdk.sh
 
 # maven settings.xml for atlassian development
 RUN mkdir -p ${HOME}/.m2
@@ -111,6 +112,11 @@ RUN $HOME/.cfg/install || :
 # set default shell to zsh
 RUN chsh -s /bin/zsh && \
   echo "export SHELL=/bin/zsh" > /etc/profile.d/40zshdefaultshell.sh
+
+# set default jvm/jdk to openjdk11 and set JAVA_HOME to default-jvm directory
+RUN rm -rf /usr/lib/jvm/default-jvm && \
+  ln -s /usr/lib/jvm/java-11-openjdk /usr/lib/jvm/default-jvm && \
+  echo "export JAVA_HOME=/usr/lib/jvm/default-jvm" > /etc/profile.d/jdk.sh
 
 # copy over files from linuxserver/code-server
 ADD ./entrypoint.sh /app/entrypoint.sh
