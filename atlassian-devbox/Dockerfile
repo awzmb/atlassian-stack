@@ -66,7 +66,9 @@ RUN curl -sSLo ./terraform-docs.tar.gz https://terraform-docs.io/dl/v0.16.0/terr
 RUN curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh
 
 # download kubectl binary
-RUN wget "https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubectl" -O "/usr/local/bin/kubectl"
+#RUN wget "https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubectl" -O "/usr/local/bin/kubectl"
+RUN curl -o /usr/local/bin/kubectl \
+  -L "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 
 RUN echo "**** install code-server ****" && \
   if [ -z ${CODE_RELEASE+x} ]; then \
@@ -74,9 +76,8 @@ RUN echo "**** install code-server ****" && \
       | awk '/tag_name/{print $4;exit}' FS='[""]' | sed 's|^v||'); \
   fi && \
   mkdir -p /app/code-server && \
-  curl -o \
-    /tmp/code-server.tar.gz -L \
-    "https://github.com/coder/code-server/releases/download/v${CODE_RELEASE}/code-server-${CODE_RELEASE}-linux-amd64.tar.gz" && \
+  curl -o /tmp/code-server.tar.gz \
+    -L "https://github.com/coder/code-server/releases/download/v${CODE_RELEASE}/code-server-${CODE_RELEASE}-linux-amd64.tar.gz" && \
   tar xf /tmp/code-server.tar.gz -C \
     /app/code-server --strip-components=1
 
@@ -108,7 +109,8 @@ RUN git clone https://github.com/awzmb/wmconfig $HOME/.cfg
 RUN $HOME/.cfg/install || :
 
 # set default shell to zsh
-RUN chsh =s /bin/zsh
+RUN chsh -s /bin/zsh && \
+  echo "export SHELL=/bin/zsh" > /etc/profile.d/40zshdefaultshell.sh
 
 # copy over files from linuxserver/code-server
 ADD ./entrypoint.sh /app/entrypoint.sh
