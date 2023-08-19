@@ -1,0 +1,228 @@
+version: '3.6'
+
+networks:
+  traefik:
+    name: traefik
+    driver: bridge
+
+services:
+  traefik:
+    image: docker.io/traefik:3.0
+    container_name: proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      - "traefik.enable=false"
+      - "traefik.backend=traefik"
+      - "traefik.docker.network=traefik"
+      - "traefik.frontend.redirect.entryPoint=https"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./atlassian-proxy/traefik.yml:/traefik.yml:ro
+      - ./atlassian-proxy/acme:/etc/traefik/acme
+    networks:
+      - traefik
+
+  database-jira:
+    image: docker.io/postgres:15-alpine
+    container_name: database-jira
+    networks:
+      - traefik
+    volumes:
+      - database-jira:/var/lib/postgresql/data
+    labels:
+      - "traefik.enable=false"
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_USER=atlassian
+      - POSTGRES_PASSWORD=jellyfish
+      - POSTGRES_DB=jiradb
+      - POSTGRES_ENCODING=UNICODE
+      - POSTGRES_COLLATE=C
+      - POSTGRES_COLLATE_TYPE=C
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  database-confluence:
+    image: docker.io/postgres:15-alpine
+    container_name: database-confluence
+    networks:
+      - traefik
+    volumes:
+      - database-confluence:/var/lib/postgresql/data
+    labels:
+      - "traefik.enable=false"
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_USER=atlassian
+      - POSTGRES_PASSWORD=jellyfish
+      - POSTGRES_DB=confluencedb
+      - POSTGRES_ENCODING=UNICODE
+      - POSTGRES_COLLATE=C
+      - POSTGRES_COLLATE_TYPE=C
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  jira:
+    depends_on:
+      - database-jira
+    image: docker.io/atlassian/jira-software:9.4.7
+    container_name: jira
+    networks:
+      - traefik
+    volumes:
+      - jira-data-var:/var/atlassian/jira
+      - jira-data-opt:/opt/atlassian/jira
+    ports:
+      - '8080:8080'
+    expose:
+      - "8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=jira"
+      - "traefik.port=8080"
+      - "traefik.http.routers.jira.rule=Host(`jira.sidar.dev.metamorphant.io`)"
+      - "traefik.http.routers.jira.tls=true"
+      - "traefik.http.routers.jira.tls.certresolver=resolver"
+    environment:
+      - ATL_JDBC_URL=jdbc:postgresql://database-jira:5432/jiradb
+      - ATL_JDBC_USER=atlassian
+      - ATL_JDBC_PASSWORD=jellyfish
+      - ATL_DB_SCHEMA_NAME=public
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgres72
+      - ATL_DB_POOLMAXSIZE=40
+      - ATL_DB_POOLMINSIZE=40
+      - ATL_DB_MAXIDLE=40
+      - ATL_PROXY_NAME=jira.sidar.dev.metamorphant.io
+      - ATL_PROXY_PORT=443
+      - ATL_TOMCAT_CONTEXTPATH=/
+      - ATL_TOMCAT_SECURE=true
+      - ATL_TOMCAT_SCHEME=https
+      - CLUSTERED=false
+      - JVM_MINIMUM_MEMORY=2048m
+      - JVM_MAXIMUM_MEMORY=4096m
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  confluence:
+    depends_on:
+      - database-confluence
+    image: docker.io/atlassian/confluence-server:latest
+    container_name: confluence
+    networks:
+      - traefik
+    volumes:
+      - confluence-data-var:/var/atlassian/application-data/confluence
+    ports:
+      - '8090:8090'
+    expose:
+      - "8090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=confluence"
+      - "traefik.port=8090"
+      - "traefik.http.routers.confluence.rule=Host(`confluence.sidar.dev.metamorphant.io`)"
+      - "traefik.http.routers.confluence.tls=true"
+      - "traefik.http.routers.confluence.tls.certresolver=resolver"
+    environment:
+      - ATL_JDBC_URL=jdbc:postgresql://database-confluence:5432/confluencedb
+      - ATL_JDBC_USER=atlassian
+      - ATL_JDBC_PASSWORD=jellyfish
+      - ATL_DB_SCHEMA_NAME=public
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgresql
+      - ATL_DB_POOLMAXSIZE=40
+      - ATL_DB_POOLMINSIZE=40
+      - ATL_DB_MAXIDLE=40
+      - ATL_PROXY_NAME=confluence.sidar.dev.metamorphant.io
+      - ATL_PROXY_PORT=443
+      - ATL_TOMCAT_CONTEXTPATH=/
+      - ATL_TOMCAT_SECURE=true
+      - ATL_TOMCAT_SCHEME=https
+      - JVM_MINIMUM_MEMORY=2048m
+      - JVM_MAXIMUM_MEMORY=4096m
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+  devbox:
+    image: devbox:latest
+    container_name: devbox
+    networks:
+      - traefik
+    volumes:
+      - devbox-config:/config
+      - devbox-home:/root
+    ports:
+      - '8443:8443'
+    expose:
+      - "8443"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=devbox"
+      - "traefik.port=8443"
+      - "traefik.http.routers.devbox.rule=Host(`devbox.sidar.dev.metamorphant.io`)"
+      - "traefik.http.routers.devbox.tls=true"
+      - "traefik.http.routers.devbox.tls.certresolver=resolver"
+    environment:
+      - FILE__PASSWORD=/run/secrets/codeserverpassword
+      - PROXY_DOMAIN_ARG=devbox.sidar.dev.metamorphant.io
+      - DEFAULT_WORKSPACE=/config/workspace
+    secrets:
+      - codeserverpassword
+    logging:
+      # limit logs retained on host to 25MB
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "50"
+
+secrets:
+  codeserverpassword:
+    file: ~/.secrets/codeserverpassword
+
+volumes:
+    database-jira:
+        name: database-jira
+        driver: local
+    database-confluence:
+        name: database-confluence
+        driver: local
+    confluence-data-var:
+        name: confluence-data-var
+        driver: local
+    jira-data-var:
+        name: jira-data-var
+        driver: local
+    jira-data-opt:
+        name: jira-data-opt
+        driver: local
+    devbox-config:
+        name: devbox-config
+        driver: local
+    devbox-home:
+        name: devbox-home
+        driver: local
+    registry:
+        name: registry
+        driver: local
